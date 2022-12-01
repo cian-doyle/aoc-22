@@ -1,4 +1,4 @@
-use std::{fs::{self}, io::BufRead};
+use std::fs;
 
 const PUZZLE_INPUT: &str = "data/calories.txt";
 
