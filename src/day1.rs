@@ -30,5 +30,13 @@ fn get_elf_calorie_counts() -> Vec<u32> {
     total_calories_vec
 }
 
+// more fp
+fn _get_elf_calorie_counts_alternative() -> Vec<u32> {
+    let calories = fs::read_to_string(PUZZLE_INPUT).expect("Can't read file");
+    let elf_vec = calories.split("\n\n").collect::<Vec<&str>>();
+
+    elf_vec.iter().map(|elf| elf.split('\n').map(|x| x.parse::<u32>().unwrap()).sum::<u32>()).collect::<Vec<u32>>()
+
+}
 
 
