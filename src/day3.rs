@@ -48,7 +48,7 @@ fn find_duplicate_items(data: String) -> Vec<char> { // Find commmon char in bot
     }).collect::<Vec<char>>()
 }
 
-fn char_to_priority(c: &char) -> u32 { // Converted using ascii codes
+fn char_to_priority(c: &char) -> u32 { // Converted to ints
     if c.is_lowercase() { 
         *c as u32 - 96 
     }
