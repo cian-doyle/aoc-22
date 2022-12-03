@@ -3,7 +3,6 @@ use std::{fs, collections::{HashSet, HashMap}};
 const PUZZLE_INPUT: &str = "data/backpacks.txt";
 const CHUNK_SIZE: usize = 3;
 
-#[derive(Debug)]
 struct Rucksack {
     first_component: String,
     second_component: String
