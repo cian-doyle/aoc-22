@@ -24,7 +24,7 @@ impl TryFrom<&str> for Assignment {
 
     fn try_from(range: &str) -> Result<Self, Self::Error> {
         match range.split_once("-") {
-            Some((start, finish)) => Ok(Assignment{start: start.parse::<u32>().unwrap(), finish: finish.parse::<u32>().unwrap()}), // *
+            Some((start, finish)) => Ok(Assignment{start: start.parse::<u32>().unwrap(), finish: finish.parse::<u32>().unwrap()}), // * todo handle error in get_assignment_pairs
             None => Err("Invalid format"),
         }
     }
