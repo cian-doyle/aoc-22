@@ -59,4 +59,4 @@ pub fn get_overlapping_pair_count() -> u32 {
     total_overlapping as u32
 }
 
-// TODO: Add unit test & better eror handling
+// TODO: Add tests & better eror handling
