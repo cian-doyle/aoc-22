@@ -11,6 +11,7 @@ struct Rucksack {
 impl Rucksack {
     fn unique_char_str(&self) -> String { // trim duplicates and concat both components into one string
         let mut unique_chars = HashSet::<char>::new();
+        // unique_chars.intersection(other)
         self.first_component.chars().for_each(|c| { 
             unique_chars.insert(c);
         });
