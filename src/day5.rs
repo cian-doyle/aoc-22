@@ -11,7 +11,7 @@ fn parse_lines(data: &str) -> Vec<Vec<char>> { // Builds vec [ [' ', 'D', ' '], 
         .map(|line| {
             let line_chars = line.chars().collect::<Vec<char>>();
             line_chars 
-                .chunks(4)
+                .chunks(4) // cut into 4 char chunks and condense chunks to single char, with ' ' meaning no crate
                 .map(|chunk|
                     if chunk[1].is_whitespace() { 
                         ' '
@@ -26,7 +26,7 @@ fn parse_lines(data: &str) -> Vec<Vec<char>> { // Builds vec [ [' ', 'D', ' '], 
         .collect()
 }
 
-fn get_crate_stacks(data: &str) -> Vec<CrateStack> { // Top of crate stack = back of VecDequeue
+fn get_crate_stacks(data: &str) -> Vec<CrateStack> { // Builds vector of stacks(which are VecDequeue<char>). Chars popped from back of vector = removed from top of stack (visually)
     let parsed_lines = parse_lines(data);
     let mut stacks = Vec::<CrateStack>::new();
 
@@ -34,7 +34,7 @@ fn get_crate_stacks(data: &str) -> Vec<CrateStack> { // Top of crate stack = bac
         stacks.push(CrateStack::new())
     }
 
-    parsed_lines 
+    parsed_lines // populate 'stacks' vector with crates, using index in vec to assign to correct stack
         .iter()
         .for_each(|line|
             for index in 0 .. line.len() {
@@ -46,7 +46,7 @@ fn get_crate_stacks(data: &str) -> Vec<CrateStack> { // Top of crate stack = bac
     stacks
 }
 
-fn parse_instructions(data: &str) -> Vec<Instruction> {
+fn parse_instructions(data: &str) -> Vec<Instruction> { // "move 1 from 3 to 2"     ->      "[1, 3, 2]"
     data.split('\n')
         .filter(|line| line.starts_with('m'))
         .map(|instruction_line| 
@@ -66,7 +66,7 @@ fn execute_instructions_cm9001(stacks: &mut [CrateStack], instructions: Vec<Inst
 
         let mut temp_crate_vec = VecDeque::<char>::with_capacity(amount);
 
-        for _ in 0 .. amount { // push to intermediate vec/queue
+        for _ in 0 .. amount { // Push crates to intermediate VecDequeue before pushing them to requested stack
             if let Some(moved_crate) = stacks[from - 1].pop_back() {
                 temp_crate_vec.push_front(moved_crate);
             }
