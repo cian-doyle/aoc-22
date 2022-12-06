@@ -26,7 +26,7 @@ fn parse_lines(data: &str) -> Vec<Vec<char>> { // Builds vec [ [' ', 'D', ' '], 
         .collect()
 }
 
-fn get_crate_stacks(data: &str) -> Vec<CrateStack> { // Builds vector of stacks(which are VecDequeue<char>). Chars popped from back of vector = removed from top of stack (visually)
+fn get_crate_stacks(data: &str) -> Vec<CrateStack> { // build vector of stacks(which are VecDequeue<char>). Chars popped from back of vector = removed from top of stack (visually)
     let parsed_lines = parse_lines(data);
     let mut stacks = Vec::<CrateStack>::new();
 
@@ -72,7 +72,7 @@ fn execute_instructions_cm9001(stacks: &mut [CrateStack], instructions: Vec<Inst
             }
         }
 
-        for _ in 0 .. amount {
+        for _ in 0 .. amount { // pop crates onto requested stack from front
             if let Some(moved_crate) = temp_crate_vec.pop_front() {
                 stacks[to - 1].push_back(moved_crate);
             }
