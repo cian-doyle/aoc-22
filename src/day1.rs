@@ -6,7 +6,6 @@ const PUZZLE_INPUT: &str = "data/calories.txt";
 pub fn get_max_calories() -> u32 {
     let total_calories_vec: Vec<u32> = get_elf_calorie_counts();
     total_calories_vec.iter().fold(0, |a, &b| a.max(b))
-   
 }
 
 // Part 2
