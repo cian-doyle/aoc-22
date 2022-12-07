@@ -1,158 +1,162 @@
-use core::fmt;
+use core::{fmt};
 use std::fs;
 
 const PUZZLE_INPUT: &str = "data/commands.txt";
 
-// Assumes that we always start at root folder and don't unecessarily visit the same folder twice 
-// (new folders are always instantiated when cd command encountered)
+#[derive(Clone, Debug)]
+struct File {
+    size: usize,
+    name: String
+}
 
-#[derive(Clone)]
+impl File {
+    fn new(size: usize, name: String) -> Self {
+        File { size, name }
+    }
+}
+
+#[derive(Clone, Debug)]
 struct Folder { // should probably have a parent struct
     name: String,
     contents: Vec<File>, 
     subfolders: Vec<Folder>
 }
 
-impl fmt::Debug for Folder {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // write!(f, "{}/", self.name)
-        // if self.subfolders.is_empty() {
-        //     write!(f, "\n{}/", self.name)
-        // }
-        // else {
-            write!(f, "\n{}/ -> {:?}", self.name, self.subfolders)
-        // }
-    }
-}
-
-impl std::cmp::PartialEq for Folder {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
-}
+// impl fmt::Debug for Folder {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         // write!(f, "{}/", self.name)
+//         // if self.subfolders.is_empty() {
+//         //     write!(f, "\n{}/", self.name)
+//         // }
+//         // else {
+//             write!(f, "\n{}/ -> \n{:?}", self.name, self.subfolders)
+//         // }
+//     }
+// }
 
 impl Folder {
     fn new(name: String, contents: Option<Vec<File>>, subfolders: Option<Vec<Folder>>) -> Self {
-        match (contents, subfolders) {
+        match (contents, subfolders) { // Probably not needed with current implementation
             (None, None) => Folder { name, contents: Vec::new(), subfolders: Vec::new() },
             (None, Some(subfolders)) => Folder { name, contents: Vec::new(), subfolders },
             (Some(contents), None) => Folder { name, contents, subfolders: Vec::new()},
-            (Some(contents), Some(subfolders)) => Folder { name, contents, subfolders },
+            (Some(contents), Some(subfolders)) => Folder { name, contents, subfolders }, 
         }
     }
 
-    fn fetch(&self, name: String) -> Option<Folder> { 
-        let folder = self.subfolders
+    fn fetch(&self, name: String) -> Option<Folder> { // Recursive fetch
+        // if let Some(folder) = self.subfolders.iter().find(|f| f.name == name) {
+        //     return Some(folder.clone())
+        // }
+        self.subfolders
             .iter()
             .map(|f| {
-                if f.name == name {
+                if f.name == name { // Base case, parent of target folder found
                     Some(f.clone())
                 }
-                else {
-                    f.fetch(name.clone())
+                else { // Recursive case, not found yet
+                    f.fetch(name.clone()) 
                 }
-            }).filter(|res| res.is_some()).last();
-
-        match folder {
-            Some(folder) => folder,
-            None => None
-        }
+            }).filter(|res| res.is_some()).last().unwrap_or(None) // No results in whole tree
     }
 
-    fn find_parent(&self, name: String) -> Option<Folder> { 
-        let folder = self.subfolders
+    fn find_parent(&self, name: String) -> Option<Folder> { // Recursive search
+        self.subfolders
             .iter()
             .map(|f| {
-                if f.subfolders.iter().any(|child| child.name == name) {
+                if f.subfolders.iter().any(|child| child.name == name) { // Base case, parent of target folder found
                     Some(f.clone())
                 }
                 else { 
-                    f.find_parent(name.clone())
+                    f.find_parent(name.clone()) // Recursive case, not found yet
                 }
-            }).filter(|res| res.is_some()).last();
-
-            match folder {
-                Some(folder) => folder,
-                None => None
-            }
+            }).filter(|res| res.is_some()).last().unwrap_or(None) // No results in whole tree
     }
 
-    fn add_subfolder(&mut self, location: String, folder: Folder) { // Adds a subfolder to the specified location
-        if location == self.name { // base case
+    fn add_folder(&mut self, location: String, folder: Folder) { // Adds a subfolder to the specified location (folder name as string) (Recursive)
+        if location == self.name { // Base case, target folder to add new subfolder in found
             self.subfolders.push(folder.clone())
         }
 
-        for f in &mut self.subfolders { // rescursive case
-            f.add_subfolder(location.clone(), folder.clone()) // implement copy ?
+        for f in &mut self.subfolders { // Recursive case, target folder not found yet
+            f.add_folder(location.clone(), folder.clone()) // implement copy ?
         }
     }
 
-    fn add_file(&mut self, file: File) { 
-        self.contents.push(file)
+    fn add_file(&mut self, location: String, file: File)  {  // Adds a file to the specified location (folder name as string) (Recursive)
+        if location == self.name { // Base case, target folder to add new file in found
+            self.contents.push(file.clone())
+        }
+
+        for f in &mut self.subfolders { // Recursive case, target folder not found yet
+            f.add_file(location.clone(), file.clone())
+        }
     }
 }
 
-#[derive(Clone, Debug)]
-struct File {
-    name: String,
-    size: usize
-}
-
-impl File {
-    fn new(name: String, size: usize) -> Self {
-        File { size, name }
-    }
-}
-
-fn parse_commands(data: &str) {  
-    let mut root = Folder::new("/".to_owned(), None, None); // Assuming we always start from root directory?
-    let mut current_folder = root.clone();
-     
-    // let f1 = Folder::new("a".to_owned(), None, None);
-    // root.add_subfolder("/".to_owned(), f1);
-
-    // let f2 = Folder::new("b".to_owned(), None, None);
-    // root.add_subfolder("/".to_owned(), f2);
+fn build_folder_tree(data: &str) -> Folder {
+    let mut tree = Folder::new("/".to_owned(), None, None); // Assuming we always start from root directory?
+    let mut current_folder = tree.clone();
 
     data
     .split('\n')
     .for_each(|line| {
-        if line.starts_with('$') {
-
-            let cmd = line.split(' ').take(3).collect::<Vec<&str>>();
-            println!("{:?}", cmd);
-
-            if cmd.len() > 2 && cmd[1] == "cd" {
-                match cmd[2] { // dir name
-                    "/" => {
-                        current_folder = root.clone(); 
-                        println!("Going to root dir");
+        let cmd = line.split(' ').take(3).collect::<Vec<&str>>();
+        if cmd.len() > 2 && cmd[1] == "cd" {
+            match cmd[2] { // folder name/arg
+                "/" => { // Go to root
+                    current_folder = tree.clone(); 
+                }
+                ".." => { // move up 1 folder
+                    if let Some(parent) = tree.find_parent(current_folder.clone().name) {
+                        current_folder = parent;                        
                     }
-                    ".." => {
-                        println!("Going up from {}", current_folder.name);
-                        match root.find_parent(current_folder.clone().name) {
-                            Some(parent) => {
-                                current_folder = parent;
-                                println!("Arrived at {}", current_folder.name);
-                            }
-                            None => println!("Already at root folder!")
-                        }
+                }
+                _ => { // move down 1 folder
+                    if let Some(target) = tree.fetch(cmd[2].to_owned()) {
+                        current_folder = target;
                     }
-                    "ls" => {
-                        println!("Going up from {}", current_folder.name);
-                        match root.find_parent(current_folder.clone().name) {
-                            Some(parent) => {
-                                current_folder = parent;
-                                println!("Arrived at {}", current_folder.name);
-                            }
-                            None => println!("Already at root folder!")
-                        }
-                    }
-                    _ => todo!()
                 }
             }
         }
-    })
+        else if cmd[0] == "dir" { // New subfolder
+            tree.add_folder(current_folder.clone().name,  Folder::new(cmd[1].to_owned(), None, None));
+        }
+        else if let Ok(file_size) = cmd[0].parse::<usize>() {
+            println!("Added new file name: {} / size: {} in {}", cmd[1], cmd[0], current_folder.name);
+            tree.add_file(current_folder.clone().name, File::new(file_size, cmd[1].to_owned()))
+        }
+    });
+    tree
+}
+
+fn parse_commands(data: &str) {  
+    let tree = build_folder_tree(data);
+
+    println!("{:#?}", tree);
+
+    // Folder { 
+    //     name: "/", 
+    //     contents: [], 
+    //     subfolders: [
+    //         Folder { 
+    //             name: "a", 
+    //             contents: [], 
+    //             subfolders: [
+    //                 Folder { 
+    //                     name: "e", 
+    //                    contents: [], 
+    //                     subfolders: [] 
+    //                 }
+    //             ] 
+    //         }, 
+    //         Folder { 
+    //             name: "d", 
+    //             contents: [], 
+    //             subfolders: [] 
+    //         }
+    //     ] 
+    // }
 }
 
 
