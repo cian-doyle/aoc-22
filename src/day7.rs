@@ -16,23 +16,11 @@ impl File {
 }
 
 #[derive(Clone, Debug)]
-struct Folder { // should probably have a parent struct
+struct Folder { 
     name: String,
     contents: Vec<File>, 
     subfolders: Vec<Folder>
 }
-
-// impl fmt::Debug for Folder {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         // write!(f, "{}/", self.name)
-//         // if self.subfolders.is_empty() {
-//         //     write!(f, "\n{}/", self.name)
-//         // }
-//         // else {
-//             write!(f, "\n{}/ -> \n{:?}", self.name, self.subfolders)
-//         // }
-//     }
-// }
 
 impl Folder {
     fn new(name: String, contents: Option<Vec<File>>, subfolders: Option<Vec<Folder>>) -> Self {
@@ -45,9 +33,6 @@ impl Folder {
     }
 
     fn fetch(&self, name: String) -> Option<Folder> { // Recursive fetch
-        // if let Some(folder) = self.subfolders.iter().find(|f| f.name == name) {
-        //     return Some(folder.clone())
-        // }
         self.subfolders
             .iter()
             .map(|f| {
@@ -92,6 +77,23 @@ impl Folder {
             f.add_file(location.clone(), file.clone())
         }
     }
+
+    fn sum_folders(&mut self) -> usize {  // Adds a file to the specified location (folder name as string) (Recursive)
+        if self.subfolders.is_empty() {
+            return self.contents.iter().map(|f| f.size).sum::<usize>()
+        }
+        let sum = self.subfolders
+            .iter_mut()
+            .map(|f| {
+                if !f.contents.is_empty() {
+                    f.contents.iter().map(|f| f.size).sum::<usize>()
+                }
+                else { 
+                    f.sum_folder()
+                }
+            }).sum::<usize>();
+        sum
+    }
 }
 
 fn build_folder_tree(data: &str) -> Folder {
@@ -99,41 +101,46 @@ fn build_folder_tree(data: &str) -> Folder {
     let mut current_folder = tree.clone();
 
     data
-    .split('\n')
-    .for_each(|line| {
-        let cmd = line.split(' ').take(3).collect::<Vec<&str>>();
-        if cmd.len() > 2 && cmd[1] == "cd" {
-            match cmd[2] { // folder name/arg
-                "/" => { // Go to root
-                    current_folder = tree.clone(); 
-                }
-                ".." => { // move up 1 folder
-                    if let Some(parent) = tree.find_parent(current_folder.clone().name) {
-                        current_folder = parent;                        
+        .split('\n')
+        .for_each(|line| {
+            let cmd = line.split(' ').take(3).collect::<Vec<&str>>();
+            if cmd.len() > 2 && cmd[1] == "cd" {
+                match cmd[2] { // folder name/arg
+                    "/" => { // Go to root
+                        current_folder = tree.clone(); 
                     }
-                }
-                _ => { // move down 1 folder
-                    if let Some(target) = tree.fetch(cmd[2].to_owned()) {
-                        current_folder = target;
+                    ".." => { // move up 1 folder
+                        if let Some(parent) = tree.find_parent(current_folder.clone().name) {
+                            current_folder = parent;                        
+                        }
+                    }
+                    _ => { // move down 1 folder
+                        if let Some(target) = tree.fetch(cmd[2].to_owned()) {
+                            current_folder = target;
+                        }
                     }
                 }
             }
-        }
-        else if cmd[0] == "dir" { // New subfolder
-            tree.add_folder(current_folder.clone().name,  Folder::new(cmd[1].to_owned(), None, None));
-        }
-        else if let Ok(file_size) = cmd[0].parse::<usize>() {
-            println!("Added new file name: {} / size: {} in {}", cmd[1], cmd[0], current_folder.name);
-            tree.add_file(current_folder.clone().name, File::new(file_size, cmd[1].to_owned()))
-        }
-    });
+            else if cmd[0] == "dir" { // New subfolder
+                tree.add_folder(current_folder.clone().name,  Folder::new(cmd[1].to_owned(), None, None));
+            }
+            else if let Ok(file_size) = cmd[0].parse::<usize>() {
+                tree.add_file(current_folder.clone().name, File::new(file_size, cmd[1].to_owned()))
+            }
+        });
+
     tree
 }
 
 fn parse_commands(data: &str) {  
-    let tree = build_folder_tree(data);
+    let mut tree = build_folder_tree(data);
 
     println!("{:#?}", tree);
+
+    println!("Size of e  {:#?}", tree.fetch("e".to_string()).unwrap().sum_folder());
+
+    println!("Size of /    {:#?}", tree.sum_folder());
+
 
     // Folder { 
     //     name: "/", 
