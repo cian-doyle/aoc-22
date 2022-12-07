@@ -41,15 +41,6 @@ impl Folder {
         }
     }
 
-    // fn children(&self) -> usize {
-    //     self.subfolders
-    //         .iter()
-    //         .map(|f| {
-    //             println!("children of {:?}", f.name);
-    //             f.children()
-    //         }).count()
-    // }
-
     fn fetch(&self, name: String) -> Option<Folder> { 
         let folder = self.subfolders
             .iter()
@@ -68,34 +59,23 @@ impl Folder {
         }
     }
 
-    // fn find_folder(&self, name: String) -> Option<Folder> { // Retrieves parent folder name
-    //     if self.subfolders.iter().any(|f| f.name == name) { // If folder is child of root
-    //         return Some("/".to_owned())
-    //     }
+    fn find_parent(&self, name: String) -> Option<Folder> { 
+        let folder = self.subfolders
+            .iter()
+            .map(|f| {
+                if f.subfolders.iter().any(|child| child.name == name) {
+                    Some(f.clone())
+                }
+                else { 
+                    f.find_parent(name.clone())
+                }
+            }).filter(|res| res.is_some()).last();
 
-    //     let accumulated_str = self.find_parent_helper(name, "".to_owned());
-
-    //     if !accumulated_str.is_empty() {
-    //        Some(accumulated_str)
-    //     }
-    //     else {
-    //         None
-    //     }
-    // }
-
-    // fn find_parent_helper(&self, name: String, acc: String) -> String { 
-    //     self.subfolders
-    //         .iter()
-    //         .map(|f| {
-    //             if f.subfolders.iter().any(|child| child.name == name) {
-    //                 acc.clone() + &f.name
-    //             }
-    //             else { 
-    //                 f.find_parent_helper(name.clone(), acc.clone())
-    //             }
-    //         }).collect::<String>()
-    // }
-
+            match folder {
+                Some(folder) => folder,
+                None => None
+            }
+    }
 
     fn add_subfolder(&mut self, location: String, folder: Folder) { // Adds a subfolder to the specified location
         if location == self.name { // base case
@@ -105,38 +85,6 @@ impl Folder {
         for f in &mut self.subfolders { // rescursive case
             f.add_subfolder(location.clone(), folder.clone()) // implement copy ?
         }
-    }
-
-    fn find_parent(&self, name: String) -> Option<String> { // Retrieves parent folder name
-        if self.subfolders.iter().any(|f| f.name == name) { // If folder is child of root
-            return Some("/".to_owned())
-        }
-
-        let accumulated_str = self.find_parent_helper(name, "".to_owned());
-
-        if !accumulated_str.is_empty() {
-           Some(accumulated_str)
-        }
-        else {
-            None
-        }
-    }
-
-    // Auxilliary find parent function (recursive). Uses a string accumulator to keep track of status of folder.
-    // (empty string = not found, otherwise string contains parent folder name).
-    // Workaround for not being able to figure out how to implement a recursive function which returns Option<T> when all folders have been checked.
-    // This means there's unecessary extra work involved in fetching the folder when we find it's parent (for backtracing with cd ..)
-    fn find_parent_helper(&self, name: String, acc: String) -> String { 
-        self.subfolders
-            .iter()
-            .map(|f| {
-                if f.subfolders.iter().any(|child| child.name == name) {
-                    acc.clone() + &f.name
-                }
-                else { 
-                    f.find_parent_helper(name.clone(), acc.clone())
-                }
-            }).collect::<String>()
     }
 
     fn add_file(&mut self, file: File) { 
@@ -160,53 +108,47 @@ fn parse_commands(data: &str) {
     let mut root = Folder::new("/".to_owned(), None, None); // Assuming we always start from root directory?
     let mut current_folder = root.clone();
      
-    let f1 = Folder::new("a".to_owned(), None, None);
-    root.add_subfolder("/".to_owned(), f1);
+    // let f1 = Folder::new("a".to_owned(), None, None);
+    // root.add_subfolder("/".to_owned(), f1);
 
-    let f2 = Folder::new("b".to_owned(), None, None);
-    root.add_subfolder("/".to_owned(), f2);
-
-    let f3 = Folder::new("c".to_owned(), None, None);
-    root.add_subfolder("b".to_owned(), f3);
-
-    let f3 = Folder::new("d".to_owned(), None, None);
-    root.add_subfolder("c".to_owned(), f3);
-
-    println!("{:?}", root);
-
-    // println!("{:?}", root.find_parent("s".to_owned()));
-    // println!("{:?}", root.find_parent("d".to_owned()));
-    // println!("{:?}", root.find_parent("a".to_owned()));
-
-    println!("Fetching folder A ---- {:?}", root.fetch("a".to_owned()));
-
-
-
-    println!("\n\n\n");
+    // let f2 = Folder::new("b".to_owned(), None, None);
+    // root.add_subfolder("/".to_owned(), f2);
 
     data
     .split('\n')
     .for_each(|line| {
         if line.starts_with('$') {
+
             let cmd = line.split(' ').take(3).collect::<Vec<&str>>();
-            // println!("{:?}", cmd);
+            println!("{:?}", cmd);
+
             if cmd.len() > 2 && cmd[1] == "cd" {
                 match cmd[2] { // dir name
                     "/" => {
-                        current_folder = root.clone(); // inefficient
-                        // println!("Arrived at root {}", current_folder.name);
+                        current_folder = root.clone(); 
+                        println!("Going to root dir");
                     }
                     ".." => {
-                        // match root.find_parent(current_folder.name) {
-                        //     Some(folder) => current_folder = root.fetch(folder),
-                        //     None => current_folder = root.clone()
-                        // }
+                        println!("Going up from {}", current_folder.name);
+                        match root.find_parent(current_folder.clone().name) {
+                            Some(parent) => {
+                                current_folder = parent;
+                                println!("Arrived at {}", current_folder.name);
+                            }
+                            None => println!("Already at root folder!")
+                        }
                     }
-                    _ => {
-                        let new_folder = Folder::new(cmd[2].to_owned(), None, None); 
-                        root.add_subfolder(current_folder.name.clone(), new_folder.clone());
-                        current_folder = new_folder;
+                    "ls" => {
+                        println!("Going up from {}", current_folder.name);
+                        match root.find_parent(current_folder.clone().name) {
+                            Some(parent) => {
+                                current_folder = parent;
+                                println!("Arrived at {}", current_folder.name);
+                            }
+                            None => println!("Already at root folder!")
+                        }
                     }
+                    _ => todo!()
                 }
             }
         }
