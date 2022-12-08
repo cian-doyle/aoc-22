@@ -10,4 +10,6 @@ path = "src/test.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+indoc = "1.0.7"
+regex = "1.7.0"
 transpose = "0.2.2"
