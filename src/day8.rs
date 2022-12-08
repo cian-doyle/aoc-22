@@ -119,7 +119,7 @@ fn scenic_scores(forest: &Forest) -> usize {
         }
     }
 
-    forest_scenic_grid_data // Remove score directions and fold remaining directional scores into one val per tree, and get maximum value
+    forest_scenic_grid_data // Remove 0 score directions and fold remaining directional scores into one val per tree, and get maximum value
         .iter()
         .map(|grid|
             grid.to_vec()
