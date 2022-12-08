@@ -21,7 +21,6 @@ struct Folder {
     contents: Vec<File>, 
     subfolders: Vec<Folder>
 }
-
 impl Folder {
     fn new(name: String, contents: Option<Vec<File>>, subfolders: Option<Vec<Folder>>) -> Self {
         match (contents, subfolders) { // Probably not needed with current implementation
