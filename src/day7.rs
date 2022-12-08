@@ -1,5 +1,5 @@
 use core::{fmt};
-use std::fs;
+use std::{fs, hash::Hash, collections::HashMap};
 
 const PUZZLE_INPUT: &str = "data/commands.txt";
 
@@ -42,7 +42,10 @@ impl Folder {
                 else { // Recursive case, not found yet
                     f.fetch(name.clone()) 
                 }
-            }).filter(|res| res.is_some()).last().unwrap_or(None) // No results in whole tree
+            })
+            .filter(|res| res.is_some())
+            .last()
+            .unwrap_or(None) // No results in whole tree, assumes root as 
     }
 
     fn find_parent(&self, name: String) -> Option<Folder> { // Recursive search
@@ -63,8 +66,12 @@ impl Folder {
             self.subfolders.push(folder.clone())
         }
 
+        if self.subfolders.iter().any(|f| f.name == folder.name) { // duplicate ?
+            return
+        }
+
         for f in &mut self.subfolders { // Recursive case, target folder not found yet
-            f.add_folder(location.clone(), folder.clone()) // implement copy ?
+            f.add_folder(location.clone(), folder.clone()); // implement copy ?
         }
     }
 
@@ -78,28 +85,121 @@ impl Folder {
         }
     }
 
-    fn sum_folders(&mut self) -> usize {  // Adds a file to the specified location (folder name as string) (Recursive)
-        if self.subfolders.is_empty() {
-            return self.contents.iter().map(|f| f.size).sum::<usize>()
-        }
-        let sum = self.subfolders
-            .iter_mut()
-            .map(|f| {
-                if !f.contents.is_empty() {
-                    f.contents.iter().map(|f| f.size).sum::<usize>()
-                }
-                else { 
-                    f.sum_folder()
-                }
-            }).sum::<usize>();
-        sum
+    fn content_size(&self) -> usize {  // Gets sum of files only, not including those in subfolders
+        self.contents.iter().map(|f| f.size).sum::<usize>()
     }
+
+    fn sum_folders_inclusive(&self) -> usize {  // Gets total size of a folder, including files in subfolders
+        let sum = self.content_size() + self.subfolders
+            .iter()
+            .map(|f|
+                if !f.subfolders.is_empty() {
+                    let immediate = f.content_size();
+                    f.sum_folders_inclusive()
+                }
+                else {
+                    f.content_size()
+                }
+            ).sum::<usize>();
+            sum
+    }
+
+    fn get_inclusive_sums(&self, limit: usize) -> Vec<(Folder, usize)> {  // Returns a vec of tuples with each folders inclusive size (size including all subfolders)
+
+        let mut state = Vec::<(Folder, usize)>::new();
+
+        sum_folder(self, &mut state);
+
+        fn sum_folder(tree: &Folder, state: &mut Vec::<(Folder, usize)>) {
+            let inclusive_size = tree.sum_folders_inclusive();
+            let exclusive_size = tree.content_size();
+            state.push((tree.clone(), inclusive_size));
+            println!("Changing state at {:?}", tree.name);
+            println!("Size of node exlusiv {:?}", exclusive_size);
+            println!("Size of node inclusive {:?}", inclusive_size);
+            
+            for node in &tree.subfolders {
+                sum_folder(node, state)
+            }
+        }
+
+        for vec in &state {
+            println!("Name: {}, Size: {}", vec.0.name, vec.1)
+        }
+
+        // for node in &self.subfolders {
+        //     sum_folder(node, &mut state);
+        // }
+
+        state.clone().into_iter().filter(|(_f, size)| size < &limit).collect()       
+    }
+
+    fn print_tree(&self) -> () {  // Gets total size of a folder, including files in subfolders
+        println!("Node: {}", self.name);
+
+        for node in &self.subfolders {
+            node.print_tree();
+        }
+        // ".".to_owned()
+       
+    }
+
+    fn folder_sizes(&mut self, mut acc_vec: Vec<(Folder, usize)>) -> Vec<(Folder, usize)>{  // Recursively adds the sum of the folders whos contents are below the given limit
+        println!("Visitng folder {}", self.name);
+        
+        let subs = self.subfolders
+            .iter_mut()
+            .map(|f|
+                {
+                    println!("Visitng child {} of {}", f.name , self.name);
+                    // acc_vec.push((f.clone(), f.sum_folders_inclusive()));
+
+                    // println!("{:?}", acc_vec);
+
+                    if f.subfolders.is_empty() { // No children, add it in
+                        println!("Appending leaf {} to vec", f.name);
+                        [(f.clone(), f.content_size())].to_vec()
+                    }
+                    else {
+                        acc_vec.push((f.clone(), f.sum_folders_inclusive()));
+                        println!("Recursive call at {}", f.name);
+    
+                        f.folder_sizes(acc_vec.clone())
+                        // acc_vec.clone()
+                    }
+                    // else {
+                    //     f.folder_sizes(acc_vec.clone())
+                    // }
+                }).collect::<Vec<Vec<(Folder, usize)>>>().into_iter().flatten().collect::<Vec<(Folder, usize)>>();
+
+            println!("SUB - {:#?}", subs);
+            subs
+        // let sum = self.sum_folders_inclusive() +  self.subfolders
+        //     .iter_mut()
+        //     .map(|f|
+        //         if !f.subfolders.is_empty() {
+        //             let sum = f.sum_folders_inclusive();
+        //             if sum > limit {
+        //                 f.folders_under_limit(limit)
+        //             }
+        //             else {
+        //                 f.sum_folders_inclusive() + f.sum_folders_inclusive()
+        //             }
+        //         }
+        //         else {
+        //             println!("Non recrusive case");
+        //             f.content_size()
+        //         }
+        //     ).filter(|s| s < &limit).sum::<usize>();
+        // sum
+    }
+
+
 }
 
 fn build_folder_tree(data: &str) -> Folder {
     let mut tree = Folder::new("/".to_owned(), None, None); // Assuming we always start from root directory?
     let mut current_folder = tree.clone();
-
     data
         .split('\n')
         .for_each(|line| {
@@ -122,7 +222,7 @@ fn build_folder_tree(data: &str) -> Folder {
                 }
             }
             else if cmd[0] == "dir" { // New subfolder
-                tree.add_folder(current_folder.clone().name,  Folder::new(cmd[1].to_owned(), None, None));
+                tree.add_folder(current_folder.clone().name, Folder::new(cmd[1].to_owned(), None, None));
             }
             else if let Ok(file_size) = cmd[0].parse::<usize>() {
                 tree.add_file(current_folder.clone().name, File::new(file_size, cmd[1].to_owned()))
@@ -133,37 +233,23 @@ fn build_folder_tree(data: &str) -> Folder {
 }
 
 fn parse_commands(data: &str) {  
+
+    println!("Building tree...");
+
     let mut tree = build_folder_tree(data);
 
-    println!("{:#?}", tree);
-
-    println!("Size of e  {:#?}", tree.fetch("e".to_string()).unwrap().sum_folder());
-
-    println!("Size of /    {:#?}", tree.sum_folder());
+    println!("Tree built...");
 
 
-    // Folder { 
-    //     name: "/", 
-    //     contents: [], 
-    //     subfolders: [
-    //         Folder { 
-    //             name: "a", 
-    //             contents: [], 
-    //             subfolders: [
-    //                 Folder { 
-    //                     name: "e", 
-    //                    contents: [], 
-    //                     subfolders: [] 
-    //                 }
-    //             ] 
-    //         }, 
-    //         Folder { 
-    //             name: "d", 
-    //             contents: [], 
-    //             subfolders: [] 
-    //         }
-    //     ] 
-    // }
+    // println!("Total of tree folders 100k MB {:#?}", tree.sum_folders_under_limit(100000));
+
+    // println!("Total of tree folders inclusive {:#?}", tree.sum_folders_inclusive());
+
+    // // let answer = std::ptr::null_mut::<usize>();
+    // println!("Total of tree folders inclusive {:#?}", tree.folder_sizes(Vec::new()));
+
+    println!("Total of tree folders inclusive {:#?}", tree.get_inclusive_sums(100000));
+
 }
 
 
@@ -172,3 +258,70 @@ pub fn solve() {
     parse_commands(&input);
 }
 
+// Resulting struct from build_tree()
+// Folder {
+//     name: "/",
+//     contents: [
+//         File {
+//             size: 14848514,
+//             name: "b.txt",
+//         },
+//         File {
+//             size: 8504156,
+//             name: "c.dat",
+//         },
+//     ],
+//     subfolders: [
+//         Folder {
+//             name: "a",
+//             contents: [
+//                 File {
+//                     size: 29116,
+//                     name: "f",
+//                 },
+//                 File {
+//                     size: 2557,
+//                     name: "g",
+//                 },
+//                 File {
+//                     size: 62596,
+//                     name: "h.lst",
+//                 },
+//             ],
+//             subfolders: [
+//                 Folder {
+//                     name: "e",
+//                     contents: [
+//                         File {
+//                             size: 584,
+//                             name: "i",
+//                         },
+//                     ],
+//                     subfolders: [],
+//                 },
+//             ],
+//         },
+//         Folder {
+//             name: "d",
+//             contents: [
+//                 File {
+//                     size: 4060174,
+//                     name: "j",
+//                 },
+//                 File {
+//                     size: 8033020,
+//                     name: "d.log",
+//                 },
+//                 File {
+//                     size: 5626152,
+//                     name: "d.ext",
+//                 },
+//                 File {
+//                     size: 7214296,
+//                     name: "k",
+//                 },
+//             ],
+//             subfolders: [],
+//         },
+//     ],
+// }
