@@ -1,5 +1,5 @@
-use core::{fmt};
-use std::{fs, hash::Hash, collections::HashMap};
+
+use std::{fs};
 
 const PUZZLE_INPUT: &str = "data/commands.txt";
 
@@ -97,7 +97,6 @@ impl Folder {
 
         fn sum_state(folder: &Folder, state: &mut usize) {
             *state += folder.content_size();
-            println!("Added {} to subscount state in {}", folder.content_size(), folder.name);
 
             for node in &folder.subfolders { // Repeat for children
                 sum_state(node, state)
@@ -105,19 +104,9 @@ impl Folder {
         }
 
         state
-        // self.content_size() + self.subfolders
-        //     .iter()
-        //     .map(|f|
-        //         if !f.subfolders.is_empty() {
-        //             f.sum_folders_inclusive()
-        //         }
-        //         else {
-        //             f.content_size()
-        //         }
-        //     ).sum::<usize>()
     }
 
-    fn get_inclusive_sums(&self, limit: usize) -> usize {  // Get size of all folders under limit, including recounts
+    fn get_total_sums(&self, limit: usize) -> usize {  // Get size of all folders under limit, including recounts
 
         let mut state = Vec::<(Folder, usize)>::new();
 
@@ -135,7 +124,7 @@ impl Folder {
 
         state
             .into_iter()
-            .filter(|(_f, size)| size < &limit)
+            .filter(|(_f, size)| size <= &limit)
             .fold(0, |acc, (folder, size)| acc + size)
     }
    
@@ -179,7 +168,7 @@ fn build_folder_tree(data: &str) -> Folder { // Builds a hierarchy of nested fol
 fn parse_commands(data: &str) {  
     let mut tree = build_folder_tree(data);
 
-    println!("Total of tree folders inclusive {:#?}", tree.get_inclusive_sums(100000));
+    println!("Total of tree folders inclusive {:#?}", tree.get_total_sums(100000));
 }
 
 
