@@ -5,7 +5,7 @@
 // use day4::get_contains_pair_count;
 // use day4::get_overlapping_pair_count;
 // use day5::solve;
-use day8::solve;
+use day9::solve;
 
 mod day1;
 mod day2;
@@ -15,6 +15,7 @@ mod day5;
 mod day6;
 mod day7;
 mod day8;
+mod day9;
 
 fn main() {
     // println!("{}", get_max_calories());
