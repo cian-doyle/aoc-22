@@ -26,17 +26,7 @@ impl RopeState {
     fn new(head: Position, tail: Position) -> RopeState {
         RopeState { head, tail }
     }
-    /*
-        if manhattan distance <= abs(2) steps, then head and tail are still touching
-        
-        [0,0], [1, 0], [2, 0]
-        [0,1],   H,    [2, 1]
-        [0,2], [1, 2], [2, 3]
 
-        -2,  -1, 0  1
-        -1,  0,  1  2
-        -2,  1,  2 
-    */
     fn touching(&self) -> bool {
         (self.head.x - self.tail.x).abs() < 2 && (self.head.y - self.tail.y).abs() < 2
     }
